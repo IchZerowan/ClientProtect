@@ -13,7 +13,7 @@ typedef unsigned int stringsize;
 
 
 // Writes data bytes to the specified file
-extern "C" CLIENTPROTECT_API void cp_file_write_bytes(const char* filename, char* data, int size);
+extern "C" CLIENTPROTECT_API void* cp_file_write_bytes(const char* filename, char* data, int size);
 
 // Reads data bytes from the specified file to the buffer
 // If buffer size is less then the file size, only size bytes are read

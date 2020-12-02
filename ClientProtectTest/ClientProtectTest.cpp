@@ -16,7 +16,7 @@ int main()
     // Reading string from the file
     cout << "Reading string from the file:" << endl;
     int outSize = 0;
-    char* result = cp_file_read_bytes("example.bin", outSize);
+    char* result = cp_file_read_bytes(filename, outSize);
 
     cout << result << " | " << outSize << " bytes" << endl;
 }

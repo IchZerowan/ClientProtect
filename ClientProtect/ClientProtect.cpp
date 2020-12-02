@@ -11,16 +11,29 @@
 // AES library from https://github.com/SergeyBel/AES/ 
 #include "AES.h"
 
+// obfy library from https://github.com/fritzone/obfy
+#include "instr.h"
 
 using namespace std;
 
 
 // Some global value
-byte value = 183;
+byte value = N(183);
+
+
+// Prints generated key
+void printArray(byte* arr, int size) {
+	cout << hex;
+	for (int i = 0; i < size; i++) {
+		cout << setw(2) << setfill('0') << (int)arr[i] << " ";
+	}
+	cout << dec << endl;
+}
 
 
 // Should return 32 bytes of unique data
 byte* getKey() {
+	OBF_BEGIN
 	INT64 otherValue = 39453834233245;
 	byte* result = new byte[32];
 	std::fill(result, result + 32, 0);
@@ -28,25 +41,31 @@ byte* getKey() {
 	// Fill array with random staff
 	result[22] = sizeof(result); // 22
 	result[27] = value;          // 27
-	result[value] = value * 152; // 11
+	result[value] = value * N(152); // 11
 
-	otherValue /= 3;
+	otherValue /= N(3);
 
-	memcpy(result + 14, "Hello, World!", 13); // 15-26
+	const char* constant = "Hello, World!";
+	IF(V(otherValue) % N(2) == N(0))
+		constant = "Íållî, Wîrld!";
+	ENDIF
+
+	memcpy(result + N(14), constant, N(13)); // 15-26
+	
 
 	result[18] = value ^ -5;
 
 	char buff[25];
-	sprintf_s(buff, "%d%p", 958, (void*) (result[19])); 
+	sprintf_s(buff, "%d%p", N(958), (void*) (result[19])); 
 	memcpy(result, buff, 9); // 0-9
 
 
 	// With some system-specific info
-	char buff2[MAX_COMPUTERNAME_LENGTH + 1];
-	DWORD size = 0;
-	GetComputerNameA(buff2, &size);
+	TCHAR buff2[MAX_COMPUTERNAME_LENGTH + 1];
+	DWORD size = sizeof(buff2) / sizeof(buff2[0]);
+	GetComputerName(buff2, &size);
 	memcpy(result + 28, buff2, 4); // 28-31
-	memcpy(result + 9, &size, 2); // 9-10
+	memcpy(result + N(9), &size, 2); // 9-10
 
 	SYSTEM_INFO siSysInfo;
 	GetSystemInfo(&siSysInfo);
@@ -59,81 +78,86 @@ byte* getKey() {
 	}
 
 	*((DWORD*)result + 5) = eaxdata;
-	
 
-	return result;
+	RETURN(result);
+	OBF_END
 }
 
 
 // Some basic transformations
 byte* transform1(byte* result) {
+	OBF_BEGIN
 	for (int i = 0; i < 32; i++) {
 		result[i] -= (32 + i);
-		result[i] *= i - 23;
+		result[i] *= i - N(23);
 	}
-	return result;
+	RETURN(result);
+	OBF_END
 }
 
 
 // Some fake basic transformations
 byte* transform2(byte* result) {
+	OBF_BEGIN
 	for (int i = 0; i < 32; i++) {
 		result[i] = -5 * result[i];
 		result[i] += 1;
 	}
 	result[13]--;
+	RETURN(result);
+	OBF_END
 }
 
 
 // Some basic transformations
 byte* transform3(byte* result) {
+	OBF_BEGIN
 	result[10] = result[4];
 	result[4] = result[22];
 	result[22] = result[0];
-	return result;
+	RETURN(result);
+	OBF_END
 }
 
 
 // Some basic transformations
 byte* transform4(byte* result) {
+	OBF_BEGIN
 	sort(&result[0], &result[32]);
-	reverse(&result[3], &result[27]);
-	return result;
+	reverse(&result[3], &result[N(27)]);
+	RETURN(result);
+	OBF_END
 }
 
 
 // Some basic transformations
 byte* transform5(byte* result) {
+	OBF_BEGIN
 	rotate(result, &result[32] - 4, &result[32]);
 	for (int i = 0; i < 32; i++) {
 		result[i] = ~result[i];
 	}
-	return result;
+	RETURN(result);
+	OBF_END
 }
 
 
 // Some complex transformation with 2 keys
 byte* mix(byte* result1, byte* result2) {
-	for (int i = 0; i < 32; i++) {
-		result1[i] = result1[i] ^ result2[i] | (65 * i);
-	}
-	memcpy(result2, result1, 16);
-	return result1;
+	OBF_BEGIN
+	int i;
+	FOR(V(i) = N(0), V(i) < N(32), V(i) += 1) 
+		result1[V(i)] = result1[V(i)] ^ result2[V(i)] | (65 * V(i));
+	ENDFOR
+	memcpy(result2, result1, N(16));
+	RETURN(result1);
+	OBF_END
 }
 
 
-// Prints generated key
-void printArray(byte* arr, int size) {
-	cout << hex;
-	for (int i = 0; i < size; i++) {
-		cout << setw(2) << setfill('0') << (int) arr[i] << " ";
-	}
-	cout << dec << endl;
-}
-
-
-CLIENTPROTECT_API void cp_file_write_bytes(const char* filename, char* data, int size)
+CLIENTPROTECT_API void* cp_file_write_bytes(const char* filename, char* data, int size)
 {
+	OBF_BEGIN
 	byte* r1 = transform1(transform4(getKey()));
 	byte* r2 = mix(transform1(getKey()), r1);
 	byte* r3 = transform3(transform5(r1));
@@ -141,8 +165,8 @@ CLIENTPROTECT_API void cp_file_write_bytes(const char* filename, char* data, int
 	
 	// Encrypt data
 	AES aes(256);
-	unsigned int outLen = 0;
-	unsigned char* bytes = aes.EncryptECB((unsigned char*)data, size, r3, outLen);
+	unsigned int outLen = N(0);
+	unsigned char* bytes = aes.EncryptECB((unsigned char*)data, size, r2, outLen);
 
 	// Write to file
 	ofstream file;
@@ -153,11 +177,14 @@ CLIENTPROTECT_API void cp_file_write_bytes(const char* filename, char* data, int
 
 	// Clean up
 	delete[] bytes;
+	RETURN(NULL)
+	OBF_END
 }
 
 
 CLIENTPROTECT_API char* cp_file_read_bytes(const char* filename, int& outSize)
 {
+	OBF_BEGIN
 	byte* r1 = transform1(transform4(getKey()));
 	byte* r2 = mix(transform1(getKey()), r1);
 	byte* r3 = transform3(transform5(r1));
@@ -174,6 +201,7 @@ CLIENTPROTECT_API char* cp_file_read_bytes(const char* filename, int& outSize)
 
 	// Decrypt data
 	AES aes(256);
-	unsigned char* result = aes.DecryptECB((unsigned char*)str.c_str(), str.length(), r3);
-	return (char*)result;
+	unsigned char* result = aes.DecryptECB((unsigned char*)str.c_str(), str.length(), r2);
+	RETURN((char*)result);
+	OBF_END
 }
