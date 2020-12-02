@@ -17,4 +17,4 @@ extern "C" CLIENTPROTECT_API void cp_file_write_bytes(const char* filename, char
 
 // Reads data bytes from the specified file to the buffer
 // If buffer size is less then the file size, only size bytes are read
-extern "C" CLIENTPROTECT_API stringsize cp_file_read_bytes(const char* filename, char* buffer, int size);
+extern "C" CLIENTPROTECT_API char* cp_file_read_bytes(const char* filename, int& outSize);

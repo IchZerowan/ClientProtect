@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "AES.h"
 
 AES::AES(int keyLen)
@@ -339,7 +340,7 @@ void AES::MixColumns(unsigned char** state)
       state[j][i] = temp[j]; //when the column is mixed, place it back into the state
     }
   }
-  delete temp;
+  delete[] temp;
 }
 
 void AES::AddRoundKey(unsigned char **state, unsigned char *key)
