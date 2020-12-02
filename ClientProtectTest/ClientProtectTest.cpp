@@ -6,7 +6,7 @@ using namespace std;
 int main()
 {
     const char* filename = "example.bin";
-    string str = "Hello, protected strings!";
+    string str = "Hello, protected stringssss!";
 
     // Writing string to the file
     cout << "Writing string to the file" << endl;
@@ -16,7 +16,7 @@ int main()
     // Reading string from the file
     cout << "Reading string from the file:" << endl;
     int outSize = 0;
-    char* result = cp_file_read_bytes(filename, outSize);
+    char* result = cp_file_read_bytes("example.bin", outSize);
 
     cout << result << " | " << outSize << " bytes" << endl;
 }
